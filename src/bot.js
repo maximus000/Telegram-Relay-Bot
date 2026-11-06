@@ -6,34 +6,34 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
 const TARGET_CHAT_ID = process.env.TARGET_CHAT_ID;
 
 if (!BOT_TOKEN || !TARGET_CHAT_ID) {
-  console.error('❌ Error: BOT_TOKEN and TARGET_CHAT_ID must be set in .env file');
+  console.error('? Ошибка: BOT_TOKEN и TARGET_CHAT_ID должны быть установлены в файле .env');
   process.exit(1);
 }
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
-// In-memory storage
-const userAliases = new Map(); // userId -> alias
+// Хранилище в памяти
+const userAliases = new Map(); // userId -> псевдоним
 const messageMapping = new Map(); // relayedMessageId -> originalSenderId
 const userSessions = new Map(); // userId -> { active: true, messageCount: 0 }
 
 let aliasCounter = 1000;
 
-// Generate a unique alias for a user
+// Генерация уникального псевдонима для пользователя
 function generateAlias(userId) {
   if (userAliases.has(userId)) {
     return userAliases.get(userId);
   }
   
-  const alias = `User_${(aliasCounter++).toString(36).toUpperCase()}`;
+  const alias = `Пользователь_${(aliasCounter++).toString(36).toUpperCase()}`;
   userAliases.set(userId, alias);
   return alias;
 }
 
-// Format timestamp
+// Форматирование времени
 function formatTime() {
   const now = new Date();
-  return now.toLocaleTimeString('en-US', { 
+  return now.toLocaleTimeString('ru-RU', { 
     hour12: false, 
     hour: '2-digit', 
     minute: '2-digit', 
@@ -41,67 +41,67 @@ function formatTime() {
   });
 }
 
-// Get chat type description
+// Получение описания чата
 function getChatDescription(chat) {
   if (chat.type === 'private') {
-    return `@${chat.username || chat.first_name || 'User'}`;
+    return `@${chat.username || chat.first_name || 'Пользователь'}`;
   } else if (chat.type === 'group' || chat.type === 'supergroup') {
-    return chat.title || 'Group';
+    return chat.title || 'Группа';
   }
-  return 'Unknown';
+  return 'Неизвестно';
 }
 
-// Format message type
+// Форматирование типа сообщения
 function getMessageType(msg) {
-  if (msg.photo) return '📷 Photo';
-  if (msg.video) return '🎥 Video';
-  if (msg.document) return '📄 Document';
-  if (msg.audio) return '🎵 Audio';
-  if (msg.voice) return '🎤 Voice';
-  if (msg.sticker) return '🎨 Sticker';
-  if (msg.animation) return '🎬 GIF';
-  if (msg.location) return '📍 Location';
-  if (msg.contact) return '👤 Contact';
-  return '💬 Text';
+  if (msg.photo) return '?? Фото';
+  if (msg.video) return '?? Видео';
+  if (msg.document) return '?? Документ';
+  if (msg.audio) return '?? Аудио';
+  if (msg.voice) return '?? Голосовое';
+  if (msg.sticker) return '?? Стикер';
+  if (msg.animation) return '?? GIF';
+  if (msg.location) return '?? Геолокация';
+  if (msg.contact) return '?? Контакт';
+  return '?? Текст';
 }
 
-// Build relay message header
+// Формирование заголовка пересылаемого сообщения
 function buildRelayHeader(msg) {
   const alias = generateAlias(msg.from.id);
   const messageType = getMessageType(msg);
   const time = formatTime();
   
-  // Include user info for admin context
+  // Информация о пользователе для админа
   const userInfo = msg.from.username ? `@${msg.from.username}` : 
                    `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim();
   
-  return `🔄 <b>Relayed Message</b>\n` +
-         `From: <code>${alias}</code>\n` +
-         `User: ${userInfo} (ID: <code>${msg.from.id}</code>)\n` +
-         `Time: ${time}\n` +
-         `Type: ${messageType}\n` +
-         `${'─'.repeat(30)}\n`;
+  return `?? <b>Пересланное сообщение</b>\n` +
+         `От: <code>${alias}</code>\n` +
+         `Пользователь: ${userInfo} (ID: <code>${msg.from.id}</code>)\n` +
+         `Время: ${time}\n` +
+         `Тип: ${messageType}\n` +
+         `${'-'.repeat(30)}\n`;
 }
 
-// Build reply header
+// Формирование заголовка ответа
 function buildReplyHeader(fromChat) {
   const chatDesc = getChatDescription(fromChat);
   const time = formatTime();
   
-  return `📨 <b>Reply from Admin/Group</b>\n` +
-         `Source: ${chatDesc}\n` +
-         `Time: ${time}\n` +
-         `${'─'.repeat(30)}\n`;
+  return `?? <b>Ответ от администратора/группы</b>\n` +
+         `Источник: ${chatDesc}\n` +
+         `Время: ${time}\n` +
+         `${'-'.repeat(30)}\n`;
 }
 
-// Relay message to target (admin/group)
+// Пересылка сообщения админу/в группу
 async function relayToTarget(msg) {
   try {
     const header = buildRelayHeader(msg);
     
     let sentMessage;
     
-    // Handle different message types
+    // Обработка разных типов сообщений
     if (msg.text) {
       const fullText = header + msg.text;
       sentMessage = await bot.sendMessage(TARGET_CHAT_ID, fullText, { 
@@ -154,34 +154,34 @@ async function relayToTarget(msg) {
       );
     }
     
-    // Store message mapping for replies
+    // Сохранение связи для ответов
     if (sentMessage) {
       messageMapping.set(sentMessage.message_id, msg.from.id);
     }
     
-    // Update session
+    // Обновление сессии
     const session = userSessions.get(msg.from.id) || { active: true, messageCount: 0 };
     session.messageCount++;
     userSessions.set(msg.from.id, session);
     
-    // Confirm to sender
-    await bot.sendMessage(msg.chat.id, '✅ Your message has been relayed successfully!');
+    // Подтверждение отправителю
+    await bot.sendMessage(msg.chat.id, '? Ваше сообщение успешно переслано!');
     
   } catch (error) {
-    console.error('Error relaying message:', error);
-    await bot.sendMessage(msg.chat.id, '❌ Failed to relay message. Please try again later.');
+    console.error('Ошибка при пересылке сообщения:', error);
+    await bot.sendMessage(msg.chat.id, '? Не удалось переслать сообщение. Пожалуйста, попробуйте позже.');
   }
 }
 
-// Relay reply back to original sender
+// Пересылка ответа обратно отправителю
 async function relayReplyToSender(msg) {
   try {
-    // Only process replies from the target chat
+    // Обрабатываем только ответы из целевого чата
     if (msg.chat.id.toString() !== TARGET_CHAT_ID.toString()) {
       return false;
     }
     
-    // Check if this is a reply to a relayed message
+    // Проверяем, является ли это ответом на пересланное сообщение
     if (!msg.reply_to_message) return false;
     
     const originalSenderId = messageMapping.get(msg.reply_to_message.message_id);
@@ -189,7 +189,7 @@ async function relayReplyToSender(msg) {
     
     const header = buildReplyHeader(msg.chat);
     
-    // Send reply back to original sender
+    // Отправка ответа оригинальному отправителю
     if (msg.text) {
       await bot.sendMessage(originalSenderId, header + msg.text, { 
         parse_mode: 'HTML' 
@@ -232,151 +232,151 @@ async function relayReplyToSender(msg) {
     
     return true;
   } catch (error) {
-    console.error('Error relaying reply:', error);
+    console.error('Ошибка при пересылке ответа:', error);
     return false;
   }
 }
 
-// Command handlers
+// Обработчики команд
 bot.onText(/\/start/, async (msg) => {
-  // Only respond to private chats
+  // Отвечаем только в личных чатах
   if (msg.chat.type !== 'private') return;
   
   const welcomeMessage = `
-🤖 <b>Anonymous Relay Bot</b>
+?? <b>Анонимный бот-посредник для связи</b>
 
-Welcome! This bot allows you to send messages anonymously to the admin/support team.
+Добро пожаловать! Этот бот позволяет анонимно отправлять сообщения администратору/службе поддержки.
 
-<b>How it works:</b>
-• Send any message here (text, photos, videos, etc.)
-• Your message will be forwarded to the admin
-• You'll be assigned an anonymous alias
-• If the admin replies, you'll receive it here
-• Your identity remains protected
+<b>Как это работает:</b>
+• Отправьте сюда любое сообщение (текст, фото, видео и т.д.)
+• Ваше сообщение будет переслано администратору
+• Вам будет присвоен анонимный псевдоним
+• Если администратор ответит, вы получите ответ здесь
+• Ваша личность останется защищённой
 
-<b>Commands:</b>
-/start - Show this message
-/myalias - Show your current alias
-/stats - View your statistics
-/help - Get detailed help
+<b>Команды:</b>
+/start - Показать это сообщение
+/myalias - Показать ваш текущий псевдоним
+/stats - Посмотреть вашу статистику
+/help - Получить подробную справку
 
-<b>Privacy:</b>
-Only your anonymous alias is visible to the admin. Your real identity is protected.
+<b>Конфиденциальность:</b>
+Администратор видит только ваш анонимный псевдоним. Ваша настоящая личность защищена.
 
-<i>Just send a message to get started!</i>
+<i>Просто отправьте сообщение, чтобы начать!</i>
   `;
   
   await bot.sendMessage(msg.chat.id, welcomeMessage, { parse_mode: 'HTML' });
 });
 
 bot.onText(/\/myalias/, async (msg) => {
-  // Only respond to private chats
+  // Отвечаем только в личных чатах
   if (msg.chat.type !== 'private') return;
   
   const alias = generateAlias(msg.from.id);
   await bot.sendMessage(
     msg.chat.id, 
-    `🎭 Your current anonymous alias is: <code>${alias}</code>\n\nThis is how the admin identifies your messages.`,
+    `?? Ваш текущий анонимный псевдоним: <code>${alias}</code>\n\nИменно так администратор идентифицирует ваши сообщения.`,
     { parse_mode: 'HTML' }
   );
 });
 
 bot.onText(/\/stats/, async (msg) => {
-  // Only respond to private chats
+  // Отвечаем только в личных чатах
   if (msg.chat.type !== 'private') return;
   
   const session = userSessions.get(msg.from.id) || { messageCount: 0 };
-  const alias = userAliases.get(msg.from.id) || 'Not assigned yet';
+  const alias = userAliases.get(msg.from.id) || 'Ещё не присвоен';
   
   const stats = `
-📊 <b>Your Session Statistics</b>
+?? <b>Статистика вашей сессии</b>
 
-Alias: <code>${alias}</code>
-Messages Sent: ${session.messageCount}
-Session Status: ${session.active ? '🟢 Active' : '⚪️ New'}
+Псевдоним: <code>${alias}</code>
+Отправлено сообщений: ${session.messageCount}
+Статус сессии: ${session.active ? '?? Активна' : '?? Новая'}
   `;
   
   await bot.sendMessage(msg.chat.id, stats, { parse_mode: 'HTML' });
 });
 
 bot.onText(/\/help/, async (msg) => {
-  // Only respond to private chats
+  // Отвечаем только в личных чатах
   if (msg.chat.type !== 'private') return;
   
   const helpMessage = `
-❓ <b>Help & Information</b>
+? <b>Справка и информация</b>
 
-<b>Supported Message Types:</b>
-• Text messages
-• Photos (with captions)
-• Videos (with captions)
-• Documents
-• Audio files
-• Voice messages
-• Stickers
-• GIFs/Animations
-• Location
-• Contacts
+<b>Поддерживаемые типы сообщений:</b>
+• Текстовые сообщения
+• Фото (с подписями)
+• Видео (с подписями)
+• Документы
+• Аудиофайлы
+• Голосовые сообщения
+• Стикеры
+• GIF-анимации
+• Геолокация
+• Контакты
 
-<b>How to Send Messages:</b>
-Simply send any message type to this bot, and it will be forwarded to the admin anonymously.
+<b>Как отправлять сообщения:</b>
+Просто отправьте этому боту сообщение любого типа, и оно будет анонимно переслано администратору.
 
-<b>Receiving Replies:</b>
-When the admin replies to your message, you'll receive it automatically here.
+<b>Получение ответов:</b>
+Когда администратор ответит на ваше сообщение, вы автоматически получите ответ здесь.
 
-<b>Privacy Protection:</b>
-• Your username and name are hidden
-• You're identified only by your alias
-• Messages are processed in real-time
-• No permanent storage of message content
+<b>Защита конфиденциальности:</b>
+• Ваше имя пользователя и имя скрыты
+• Вы идентифицируетесь только по псевдониму
+• Сообщения обрабатываются в реальном времени
+• Содержимое сообщений не сохраняется постоянно
 
-<b>Need Help?</b>
-Just send your question or concern, and the admin will respond!
+<b>Нужна помощь?</b>
+Просто отправьте свой вопрос или обращение, и администратор ответит!
   `;
   
   await bot.sendMessage(msg.chat.id, helpMessage, { parse_mode: 'HTML' });
 });
 
-// Handle all incoming messages
+// Обработка всех входящих сообщений
 bot.on('message', async (msg) => {
-  // Ignore commands (already handled)
+  // Игнорируем команды (уже обработаны)
   if (msg.text && msg.text.startsWith('/')) return;
   
-  // Check if message is from target chat (admin/group replying)
+  // Проверяем, является ли сообщение ответом из целевого чата (админ/группа)
   if (msg.chat.id.toString() === TARGET_CHAT_ID.toString()) {
     const wasRelay = await relayReplyToSender(msg);
-    return; // Don't process further
+    return; // Дальше не обрабатываем
   }
   
-  // Only accept messages from private chats
+  // Принимаем сообщения только из личных чатов
   if (msg.chat.type !== 'private') {
-    console.log(`Ignored message from ${msg.chat.type} chat (ID: ${msg.chat.id})`);
+    console.log(`Проигнорировано сообщение из чата типа ${msg.chat.type} (ID: ${msg.chat.id})`);
     return;
   }
   
-  // Relay message to target
+  // Пересылка сообщения админу
   await relayToTarget(msg);
 });
 
-// Error handling
+// Обработка ошибок
 bot.on('polling_error', (error) => {
-  console.error('Polling error:', error);
+  console.error('Ошибка polling:', error);
 });
 
-// Graceful shutdown
+// Корректное завершение работы
 process.on('SIGINT', () => {
-  console.log('\n🛑 Bot is shutting down...');
+  console.log('\n?? Бот завершает работу...');
   bot.stopPolling();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  console.log('\n🛑 Bot is shutting down...');
+  console.log('\n?? Бот завершает работу...');
   bot.stopPolling();
   process.exit(0);
 });
 
-console.log('🚀 Telegram Relay Bot is running...');
-console.log(`📍 Target Chat ID: ${TARGET_CHAT_ID}`);
-console.log('📝 Accepting messages from private chats only');
-console.log('💡 Users can start with /start command\n');
+console.log('?? Telegram Relay Bot запущен...');
+console.log(`?? ID целевого чата: ${TARGET_CHAT_ID}`);
+console.log('?? Принимаются сообщения только из личных чатов');
+console.log('?? Пользователи могут начать с команды /start\n');
