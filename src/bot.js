@@ -1,6 +1,7 @@
 // src/bot.js
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
+const http = require('http');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const TARGET_CHAT_ID = process.env.TARGET_CHAT_ID;
@@ -10,6 +11,23 @@ if (!BOT_TOKEN || !TARGET_CHAT_ID) {
   process.exit(1);
 }
 
+// ==========================================
+// 1. МИНИ-СЕРВЕР ДЛЯ RENDER И UPTIMEROBOT
+// ==========================================
+const server = http.createServer((req, res) => {
+  // Отвечаем коротким "OK" на любой запрос (чтобы Render видел открытый порт)
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('OK');
+});
+
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🌐 HTTP-сервер запущен на порту ${PORT} (для проверок Render/UptimeRobot)`);
+});
+
+// ==========================================
+// 2. ЛОГИКА БОТА
+// ==========================================
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
 // Хранилище в памяти
@@ -345,13 +363,17 @@ bot.on('polling_error', (error) => {
 process.on('SIGINT', () => {
   console.log('\n🛑 Бот завершает работу...');
   bot.stopPolling();
-  process.exit(0);
+  server.close(() => {
+    process.exit(0);
+  });
 });
 
 process.on('SIGTERM', () => {
   console.log('\n🛑 Бот завершает работу...');
   bot.stopPolling();
-  process.exit(0);
+  server.close(() => {
+    process.exit(0);
+  });
 });
 
 console.log('🚀 Telegram Relay Bot запущен...');
